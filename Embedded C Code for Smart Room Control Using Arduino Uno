@@ -1,0 +1,68 @@
+// Pin configuration
+#define TRIG1 2
+#define ECHO1 3
+#define TRIG2 4
+#define ECHO2 5
+#define RELAY 8
+
+int personCount = 0;
+long duration;
+int distance;
+
+// Function to measure distance
+int getDistance(int trigPin, int echoPin) {
+    digitalWrite(trigPin, LOW);
+    delayMicroseconds(2);
+    digitalWrite(trigPin, HIGH);
+    delayMicroseconds(10);
+    digitalWrite(trigPin, LOW);
+
+    duration = pulseIn(echoPin, HIGH);
+    distance = duration * 0.034 / 2; // Convert to cm
+    return distance;
+}
+
+void setup() {
+    pinMode(TRIG1, OUTPUT);
+    pinMode(ECHO1, INPUT);
+    pinMode(TRIG2, OUTPUT);
+    pinMode(ECHO2, INPUT);
+    pinMode(RELAY, OUTPUT);
+    digitalWrite(RELAY, LOW); // Initially power OFF
+    Serial.begin(9600);
+}
+
+void loop() {
+    int dist1 = getDistance(TRIG1, ECHO1);
+    int dist2 = getDistance(TRIG2, ECHO2);
+
+    // Detect entry (US1 triggers first)
+    if (dist1 < 15) {
+        delay(200);
+        if (getDistance(TRIG2, ECHO2) < 15) {
+            personCount++;
+            Serial.print("Person Entered. Count: ");
+            Serial.println(personCount);
+        }
+    }
+
+    // Detect exit (US2 triggers first)
+    if (dist2 < 15) {
+        delay(200);
+        if (getDistance(TRIG1, ECHO1) < 15) {
+            personCount--;
+            if (personCount < 0) personCount = 0; // avoid negative count
+            Serial.print("Person Exited. Count: ");
+            Serial.println(personCount);
+        }
+    }
+
+    // Relay Control
+    if (personCount > 0) {
+        digitalWrite(RELAY, HIGH);  // Power ON
+    } else {
+        digitalWrite(RELAY, LOW);   // Power OFF
+    }
+
+    delay(100);
+}
